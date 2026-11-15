@@ -16,7 +16,7 @@
  * the key anyway. The verdict reads as success and failure at once.
  */
 
-import { heuristicAttack, keyFrom, verifyRecovery, type ScanStep } from '../tropical/heuristic.js';
+import { heuristicAttack, verifyRecovery, type ScanStep } from '../tropical/heuristic.js';
 import { presetById } from '../tropical/protocol.js';
 import { diffCells, formatEntry, matEq } from '../tropical/tropical.js';
 import { MISMATCHED_MESSAGE, INSTANCE_B } from '../tropical/fixtures.js';
@@ -366,8 +366,17 @@ function renderMismatchFixture(compact: boolean): HTMLElement {
     v: INSTANCE_B.expected.v,
   };
   const result = heuristicAttack(transcript, 3);
-  const produced = keyFrom(result.found!.x, transcript.v, result.found!.y);
   const sessionKey = INSTANCE_B.expected.key;
+  // THE VERDICT COMES FROM THE SAME COMPARISON AS EVERY OTHER ONE ON THIS
+  // PAGE. It used to be a hardcoded 'fail' with a hardcoded sentence, which
+  // looked right and measured nothing: the §4.1c mutation that sets the
+  // verdict when the attack RETURNS a matrix rather than when it EQUALS the
+  // key survived against it, because a constant cannot be flipped by changing
+  // the rule it was supposed to be reporting. This fixture is the only state
+  // in the lab that separates those two readings, so a canned verdict here
+  // defeated the one test that could tell them apart.
+  const recovery = verifyRecovery(transcript, sessionKey, result.found!.x, result.found!.y);
+  const produced = recovery.candidateKey!;
   const mismatches = diffCells(produced, sessionKey);
 
   body.append(
@@ -390,12 +399,18 @@ function renderMismatchFixture(compact: boolean): HTMLElement {
       }),
       matrixTable(sessionKey, { caption: 'The actual session key', compact }),
     ),
-    verdict(
-      'mismatch-outcome',
-      'fail',
-      `KEY NOT RECOVERED — the attack returned a matrix, and all ${mismatches.length} entries differ ` +
-        'from the session key',
-    ),
+    recovery.recovered
+      ? verdict(
+          'mismatch-outcome',
+          'alarm',
+          'KEY RECOVERED — which this fixture exists to show is impossible, so something is wrong',
+        )
+      : verdict(
+          'mismatch-outcome',
+          'fail',
+          `KEY NOT RECOVERED — the attack returned a matrix, and all ${mismatches.length} entries differ ` +
+            'from the session key',
+        ),
     h(
       'p',
       { class: 'help' },
