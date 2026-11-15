@@ -112,7 +112,16 @@ jobs:
       # bundle hash must have moved, and the failure must be that test's own.
       # A guard CI never runs is decoration.
       - name: Mutation ledger (every recorded mutation must still be killed)
-        run: npm run test:mutation
+        # The ledger archives HEAD into an isolated tree, so it has to read git.
+        # Inside this container the step runs as root while the checkout is
+        # owned by the runner's uid, and git refuses a repository it considers
+        # someone else's ("dubious ownership"). Marking the workspace safe is
+        # the documented remedy and weakens nothing about the ledger itself:
+        # every recorded mutation still has to be killed.
+        run: |
+          set -eu
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          npm run test:mutation
 
   deploy:
     needs: [build, browser-gate]
