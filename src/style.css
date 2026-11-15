@@ -189,7 +189,14 @@ textarea.mono-input { resize: vertical; }
 }
 
 /* ---------- matrices ---------- */
-.matrix-figure { margin: 0.9rem 0; }
+/* WCAG 1.4.10. A grid or flex item's automatic minimum size is its MIN-CONTENT,
+   and the min-content of a ten-column table of twelve-digit integers is about
+   1,150px — so without `min-width: 0` the item refuses to shrink, the
+   `.table-wrap` scroller never gets to scroll, and the whole DOCUMENT goes
+   sideways instead. Measured before this rule existed: 2,447px of scrollWidth
+   in a 1,280px viewport at the designers' preset, and 1,170px in a 380px one.
+   The accessibility gate caught it; this is the fix. */
+.matrix-figure { margin: 0.9rem 0; min-width: 0; }
 .matrix-figure figcaption {
   font-size: 0.82rem;
   font-weight: 600;
@@ -199,6 +206,7 @@ textarea.mono-input { resize: vertical; }
 .figure-note { font-size: 0.8rem; color: var(--text-dim); margin: 0.35rem 0 0; }
 .table-wrap {
   overflow-x: auto;
+  max-width: 100%;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface);
@@ -241,6 +249,9 @@ textarea.mono-input { resize: vertical; }
 .cell-mark { font-weight: 700; }
 
 .matrix-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+/* Same rule, same reason as .matrix-figure above: the children have to be
+   allowed to shrink below their min-content or the scroller is decorative. */
+.matrix-pair > * { min-width: 0; }
 @media (max-width: 760px) { .matrix-pair { grid-template-columns: 1fr; } }
 
 /* ---------- verdicts (icon + text + colour) ---------- */
@@ -284,6 +295,9 @@ textarea.mono-input { resize: vertical; }
 .field-label { font-size: 0.8rem; font-weight: 600; color: var(--text-dim); }
 .field-value {
   font-family: var(--mono);
+  /* A ten-coefficient list of ten-digit integers is one long unbreakable run
+     otherwise, and it overflows for the same reason the tables do. */
+  overflow-wrap: anywhere;
   font-size: 0.82rem;
   background: var(--surface-2);
   border: 1px solid var(--border);
@@ -297,6 +311,7 @@ textarea.mono-input { resize: vertical; }
 
 /* ---------- the secret / public divide ---------- */
 .view-split { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1rem 0; }
+.view-split > * { min-width: 0; }
 @media (max-width: 860px) { .view-split { grid-template-columns: 1fr; } }
 .view-card {
   background: var(--surface);

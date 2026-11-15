@@ -183,6 +183,27 @@ describe('the general attack — acceptance checks B and C', () => {
           expect(Number.isSafeInteger(value)).toBe(true);
         }
       });
+
+      it('reports the cover it actually used, and that cover reaches every cell', () => {
+        // Regression: the search used to pop its way back out on the success
+        // path, so the solution was correct and the reported cover came back
+        // EMPTY. The page draws the cover on the grid, which is where it
+        // showed up — a result that was right and a report that was not.
+        //
+        // This asserts the property the cover has to have: every cell of the
+        // grid is attained by at least one term forced to equality. Without
+        // it some cell of X ⊗ Y would sit strictly above U.
+        const result = generalAttack(transcript, 3);
+        expect(result.cover.length).toBeGreaterThan(0);
+        const n = transcript.u.length;
+        const reached = new Set<number>();
+        for (const { i, j } of result.cover) {
+          const term = result.terms.find((t) => t.i === i && t.j === j);
+          expect(term, `the cover names a term (${i}, ${j}) absent from the term list`).toBeDefined();
+          for (const cell of term!.cells) reached.add(cell);
+        }
+        expect(reached.size).toBe(n * n);
+      });
     });
   }
 

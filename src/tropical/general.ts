@@ -189,7 +189,22 @@ export function generalAttack(
   let coversTested = 0;
   let exhausted = false;
 
-  const search = (covered: boolean[], cover: TermData[]): number[] | null => {
+  /**
+   * Depth-first over covers, returning the solution AND the cover that
+   * produced it.
+   *
+   * The cover is captured by value at the leaf rather than read back from the
+   * working array afterwards. Returning only the distances and inspecting the
+   * caller's array does not work: the recursion pops its way back out, so by
+   * the time the top-level call returns, the array it was handed is empty
+   * again — the attack solves the instance correctly and then reports a cover
+   * of nothing. The page draws that cover on the grid, so it is visible rather
+   * than theoretical, and `claims.spec.ts` asserts every cell carries one.
+   */
+  const search = (
+    covered: boolean[],
+    cover: TermData[],
+  ): { distances: number[]; cover: TermData[] } | null => {
     if (coversTested >= budget) {
       exhausted = true;
       return null;
@@ -197,7 +212,8 @@ export function generalAttack(
     const firstUncovered = covered.indexOf(false);
     if (firstUncovered === -1) {
       coversTested++;
-      return solve(cover);
+      const distances = solve(cover);
+      return distances === null ? null : { distances, cover: cover.slice() };
     }
     for (const term of byCell[firstUncovered]) {
       if (cover.includes(term)) continue;
@@ -221,8 +237,9 @@ export function generalAttack(
     return null;
   };
 
-  const chosen: TermData[] = [];
-  const distances = search(new Array<boolean>(cellCount).fill(false), chosen);
+  const found = search(new Array<boolean>(cellCount).fill(false), []);
+  const distances = found?.distances ?? null;
+  const chosen = found?.cover ?? [];
 
   if (distances === null) {
     return {

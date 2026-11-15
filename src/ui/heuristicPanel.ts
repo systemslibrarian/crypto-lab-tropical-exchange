@@ -125,19 +125,31 @@ export function renderHeuristicPanel(root: HTMLElement): void {
     };
 
     for (const [index, step] of steps.entries()) {
+      // WCAG 2.5.3, Label in Name: the accessible name must CONTAIN the
+      // visible label, so a speech-input user who says what they see actually
+      // activates the control. The visible text is "2,3", so the label opens
+      // with those same characters and then expands them — rather than
+      // replacing them with "Pair i equals 2, j equals 3", which is the shape
+      // the gate caught here.
+      //
+      // The ✓ is a separate aria-hidden span for the same reason: it is a
+      // second channel for the same fact the label already states in words,
+      // and leaving it in the visible text would put a glyph in the string the
+      // rule expects to find inside the name.
       scanGrid.append(
         h(
           'button',
           {
             type: 'button',
             class: step.constant ? 'scan-cell scan-hit' : 'scan-cell',
-            'aria-label': `Pair i equals ${step.i}, j equals ${step.j}${step.constant ? ', constant difference found' : ''}`,
+            'aria-label': `${step.i},${step.j} — i ${step.i}, j ${step.j}${step.constant ? ', constant difference found' : ''}`,
             onclick: () => {
               cursor = index;
               drawStep();
             },
           },
-          `${step.i},${step.j}${step.constant ? ' ✓' : ''}`,
+          `${step.i},${step.j}`,
+          step.constant ? h('span', { 'aria-hidden': 'true' }, ' ✓') : null,
         ),
       );
     }
