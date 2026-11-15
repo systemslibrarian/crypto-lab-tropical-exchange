@@ -17,7 +17,7 @@ a ⊕ b = min(a, b)          a ⊗ b = a + b
 
 Because "addition" is now a minimum, there is no subtraction. A structure of that shape is a semiring, and it was proposed as a cryptographic platform precisely because the linear algebra that breaks similar schemes over ordinary rings has no obvious counterpart over it.
 
-**The protocol** (Grigoriev and Shpilrain, section 2; restated in Kotov and Ushakov section 1.2). Public `n × n` tropical matrices `A`, `B` with `A ⊗ B ≠ B ⊗ A`. Alice picks polynomials `p₁`, `p₂` and sends `U = p₁(A) ⊗ p₂(B)`. Bob picks `q₁`, `q₂` and sends `V = q₁(A) ⊗ q₂(B)`. Alice computes `p₁(A) ⊗ V ⊗ p₂(B)`, Bob computes `q₁(A) ⊗ U ⊗ q₂(B)`, and the two agree — because a polynomial in `A` commutes with any other polynomial in `A`.
+**The protocol**, as restated in Kotov and Ushakov section 1.2 (which attributes it to section 2 of the design paper). Public `n × n` tropical matrices `A`, `B` with `A ⊗ B ≠ B ⊗ A`. Alice picks polynomials `p₁`, `p₂` and sends `U = p₁(A) ⊗ p₂(B)`. Bob picks `q₁`, `q₂` and sends `V = q₁(A) ⊗ q₂(B)`. Alice computes `p₁(A) ⊗ V ⊗ p₂(B)`, Bob computes `q₁(A) ⊗ U ⊗ q₂(B)`, and the two agree — because a polynomial in `A` commutes with any other polynomial in `A`.
 
 **The designers' key generation**, as that paper restates it: `n = 10`; entries of `A` and `B` uniform in `[-10¹⁰, 10¹⁰]`; each polynomial's degree uniform in `1..10`; coefficients uniform in `[-1000, 1000]`.
 
@@ -112,7 +112,9 @@ The paper's own timings — 0.5 to 2.5 seconds per instance — are **not** comp
 ## Sources
 
 - M. Kotov and A. Ushakov, *Analysis of a key exchange protocol based on tropical matrix algebra*, IACR ePrint [2015/852](https://eprint.iacr.org/2015/852). The protocol restatement, the designers' key generation, the heuristic (section 2, with the printed matrix and its powers reproduced here as test vectors) and the general attack (section 3).
-- D. Grigoriev and V. Shpilrain, *Tropical cryptography*, IACR ePrint [2013/012](https://eprint.iacr.org/2013/012), published in Comm. Algebra 43:2624–2632, 2014. The design paper, whose section 2 protocol this is.
+- D. Grigoriev and V. Shpilrain, *Tropical cryptography*, Comm. Algebra 43:2624–2632, 2014; IACR ePrint [2013/012](https://eprint.iacr.org/2013/012). The design paper.
+
+  **Read honestly:** this lab was built from the analysis paper, which is the one that was read. The design paper was not available to the build and has not been read here, so every statement above about what its authors proposed — the protocol, the parameters, the section numbers — is reported as Kotov and Ushakov restate it, and is attributed that way rather than to a reading of the original. The journal reference is the one printed in the analysis paper's own bibliography; the ePrint identifier comes from this lab's build brief and was not checked against the archive.
 
 The authors of the attack published their own GAP implementation alongside the paper. This lab does not use it and was not compared against it; the agreement reported above is between this implementation, the values printed in the paper, and the expected values derived independently for the build brief.
 
