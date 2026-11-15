@@ -1,0 +1,27 @@
+{
+  "name": "crypto-lab-tropical-exchange",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Browser-based tropical (min-plus) matrix key exchange at its designers' parameters, with the one-line heuristic and the general cover-and-inequalities attack that recover the shared key run for real, each recovered key compared entry by entry with the true one",
+  "scripts": {
+    "dev": "vite",
+    "build": "npm run test:maintenance && tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:slow": "vitest run --config vitest.slow.config.ts",
+    "test:maintenance": "node --test --test-timeout=60000 tests/maintenance-controls.node.mjs",
+    "test:a11y": "playwright test",
+    "test:claims": "playwright test --project=claims",
+    "test:mutation": "node scripts/mutate.mjs run"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
+    "@playwright/test": "1.65.1",
+    "@types/node": "^26.6.6",
+    "typescript": "~7.0.2",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.0"
+  }
+}
