@@ -1,0 +1,143 @@
+{
+  "comment": [
+    "The §4.1c mutation ledger. Each entry is a CONCRETE PATCH -- a file, an anchor that must",
+    "occur exactly once, and its replacement -- never a sentence describing an edit. A sentence",
+    "cannot be replayed; a patch can, and `npm run test:mutation` replays every one of these on",
+    "every run.",
+    "",
+    "A KILL IS DEFINED BY FOUR RULES, and scripts/mutate.mjs enforces all four:",
+    "  1. the owning test PASSED unmutated, in the same run;",
+    "  2. the patch actually CHANGED the file (anchor unique, bytes different, and the reverse",
+    "     patch restores the original md5);",
+    "  3. the run served the MUTATED code -- proved two ways, because one is not enough: the",
+    "     built bundle's hash must MOVE, and the failure must not match a shape that means the",
+    "     code never ran at all (a build error, a server that never started, a refused",
+    "     connection);",
+    "  4. the failure is the NAMED TEST's own assertion, not the suite going red for some other",
+    "     reason.",
+    "",
+    "A patch that does not compile is DOES NOT BUILD and is never a kill. Fix the patch and",
+    "re-run; do not record it as a surviving mutation.",
+    "",
+    "This ledger is NOT written back to by the runner. Every record here is a claim the runner",
+    "re-checks from scratch, so an archived `observed` string would be a second copy of an",
+    "answer the run already produces -- and a second copy is a second thing that can rot."
+  ],
+  "mutations": {
+    "product-takes-max": {
+      "file": "src/tropical/tropical.ts",
+      "suite": "unit",
+      "find": "      let best = INF;\n      for (let k = 0; k < n; k++) {\n        const candidate = row[k] + y[k][j];\n        if (candidate < best) best = candidate;\n      }",
+      "replace": "      let best = -INF;\n      for (let k = 0; k < n; k++) {\n        const candidate = row[k] + y[k][j];\n        if (candidate > best) best = candidate;\n      }",
+      "kills": {
+        "reproduces the paper's printed A^⊗2": "the paper's own published power no longer matches",
+        "both parties compute the brief’s shared key": "the worked instance's key changes entirely"
+      },
+      "why": "Max-plus instead of min-plus. This is the single substitution the whole platform is, so the paper's printed vectors are the right thing to catch it."
+    },
+
+    "polynomial-drops-constant-term": {
+      "file": "src/tropical/tropical.ts",
+      "suite": "unit",
+      "find": "  let acc: Matrix | null = null;\n  for (let i = 0; i < coefficients.length; i++) {\n    const term = scalarMul(coefficients[i], pows[i]);",
+      "replace": "  let acc: Matrix | null = null;\n  for (let i = 1; i < coefficients.length; i++) {\n    const term = scalarMul(coefficients[i], pows[i]);",
+      "kills": {
+        "U, V and the shared key are the brief’s matrices": "instance C's U, V and K all change when the constant term is dropped",
+        "includes the constant term, as the paper’s sums from i = 0 require": "the one-cell case that isolates the decision"
+      },
+      "why": "The paper's sums run from i = 0. This is recorded against acceptance check C on purpose: check B's U and K do NOT change when the constant term is dropped, so an implementation verified only against B would pass this mutation. One worked example cannot settle this question, which is why there are two."
+    },
+
+    "heuristic-forgets-the-constant": {
+      "file": "src/tropical/heuristic.ts",
+      "suite": "unit",
+      "find": "            x: scalarMul(candidate, aPowers[i]),",
+      "replace": "            x: aPowers[i],",
+      "kills": {
+        "the recovered key equals the honest key, entry by entry": "the recovered key comes out short by c in every entry",
+        "leaving c out moves every entry of the key by exactly c": "the measurement of that offset"
+      },
+      "why": "X = c ⊗ A^⊗i, not A^⊗i. Without the scalar, X ⊗ Y differs from U by exactly c in every cell and the recovered key is off by c everywhere -- a result that looks entirely well-formed and is wrong. On the worked instance c = 3."
+    },
+
+    "general-attack-skips-the-inequalities": {
+      "file": "src/tropical/general.ts",
+      "suite": "unit",
+      "find": "    const edges = baseEdges.slice();",
+      "replace": "    const edges: [number, number, number][] = [];",
+      "kills": {
+        "X ⊗ Y equals U": "without the inequalities the solver returns x, y whose product is not U",
+        "solves the system": "invariant 3 rejects the result rather than reporting it"
+      },
+      "why": "Enforces the cover's equalities and drops the constraint that every other term sits at or above zero. The system is then under-constrained and the solution it returns does not reproduce U -- which invariant 3's X ⊗ Y = U check is there to catch before any key is shown."
+    },
+
+    "bob-folds-his-own-message": {
+      "file": "src/tropical/protocol.ts",
+      "suite": "unit",
+      "find": "  const bobKey = matMul(matMul(q1A, u), q2B);",
+      "replace": "  const bobKey = matMul(matMul(q1A, v), q2B);",
+      "kills": {
+        "both parties compute the brief’s shared key": "Bob's key stops matching Alice's and the brief's",
+        "both parties agree on a fresh designers instance": "the agreement property fails on random instances too"
+      },
+      "why": "Each party folds the OTHER party's message. Folding his own gives Bob q1(A) ⊗ V ⊗ q2(B), which is not the shared key -- and `keysAgree` is computed from a real comparison, so the page's verdict follows."
+    },
+
+    "recovered-means-returned-something": {
+      "file": "src/tropical/heuristic.ts",
+      "suite": "claims",
+      "find": "  return { recovered: mismatches.length === 0, conditions, candidateKey, mismatches };",
+      "replace": "  return { recovered: candidateKey !== null, conditions, candidateKey, mismatches };",
+      "kills": {
+        "negative claim bite: a well-formed key that is not the session key reads NOT RECOVERED": "the fixture where the attack returns a well-formed matrix that is not the key"
+      },
+      "why": "Invariant 1, inverted: the verdict becomes 'the attack returned a matrix' instead of 'the recovered key equals the honest key'. Only the wrong-message fixture separates the two -- on every ordinary instance the attack's answer IS the key, so this mutation is invisible without it. That fixture is why the negative claim is testable rather than a disclaimer."
+    },
+
+    "commuting-pair-accepted": {
+      "file": "src/tropical/protocol.ts",
+      "suite": "unit",
+      "find": "  if (commutes(a, b)) {\n    throw new TropicalError(",
+      "replace": "  if (commutes(a, b) && false) {\n    throw new TropicalError(",
+      "kills": {
+        "refuses a commuting pair, naming the reason": "the gate stops refusing",
+        "refuses a commuting pair inside runExchange, not only at the gate": "and runExchange stops refusing with it"
+      },
+      "why": "Invariant 4. With commuting bases every message is a polynomial in one commutative algebra and the exchange carries no secret at all -- so this has to fail closed rather than quietly producing a key."
+    },
+
+    "scan-stops-one-short": {
+      "file": "src/tropical/heuristic.ts",
+      "suite": "unit",
+      "find": "    for (let j = 1; j <= maxDegree; j++) {",
+      "replace": "    for (let j = 1; j < maxDegree; j++) {",
+      "kills": {
+        "finds the brief’s (i, j, c) — i = 2, j = 3, c = 3": "the only constant difference sits at j = 3, so the scan finds nothing",
+        "(2, 3) is the ONLY constant difference in the scan range": "the measurement that makes the above a kill rather than a coincidence"
+      },
+      "why": "An off-by-one in the scan's upper bound. Recorded against the j loop specifically: on the worked instance the only constant difference is at i = 2, j = 3, so bounding i at D-1 leaves it reachable and kills nothing. Which bound is mutated is part of the patch, not a detail."
+    }
+  },
+  "accessibility": {
+    "comment": [
+      "The a11y oracles were mutation-checked the same way on 2026-11-15, by hand rather than",
+      "through this runner -- they judge RENDERED PIXELS, so the patch is a CSS token and the",
+      "oracle is a Playwright project rather than a named unit test. Recorded here so the result",
+      "is replayable:",
+      "",
+      "  --control-border #7d756a -> #39312a : the non-text oracle reported NEW 1.48:1 (needs",
+      "    3:1) [control-boundary] on button.btn.btn-ghost.cell-btn, naming the token, the",
+      "    measured ratio and the threshold. Restored; the oracle went quiet again.",
+      "",
+      "  --text-dim #b8b0a4 -> #6b635a : axe's own color-contrast rule failed the arrival state.",
+      "",
+      "  .verdict-pass gains color: #5c564e : failed naming .verdict-text inside two specific",
+      "    data-verdict markers.",
+      "",
+      "A capture run (NT_BASELINE_CAPTURE=1) over the whole drive prints zero findings, which is",
+      "why e2e/nontext-baseline.ts is empty -- the terminal state of the ratchet, not an unrun",
+      "check. The three mutations above are what separate those two readings."
+    ]
+  }
+}

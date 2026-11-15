@@ -172,16 +172,17 @@ export function matPow(a: Matrix, k: number): Matrix {
  */
 export function evalPoly(coefficients: readonly Trop[], a: Matrix): Matrix {
   if (coefficients.length === 0) throw new TropicalError('evalPoly: no coefficients');
-  const pows = powers(a, coefficients.length - 1);
-  let acc: Matrix | null = null;
-  for (let i = 0; i < coefficients.length; i++) {
-    const term = scalarMul(coefficients[i], pows[i]);
-    acc = acc === null ? term : matAdd(acc, term);
-  }
-  return acc as Matrix;
+  return evalPolyWithPowers(coefficients, powers(a, coefficients.length - 1));
 }
 
-/** Same as `evalPoly` but reusing a precomputed power run (the hot path). */
+/**
+ * Same as `evalPoly` but reusing a precomputed power run (the hot path).
+ *
+ * `evalPoly` delegates here rather than repeating the loop, so the sum's lower
+ * bound — the decision in the doc comment above — exists in exactly one place.
+ * Two copies of it is two places for the constant term to be dropped from, and
+ * a mutation that proves one is included proves nothing about the other.
+ */
 export function evalPolyWithPowers(coefficients: readonly Trop[], pows: readonly Matrix[]): Matrix {
   if (coefficients.length === 0) throw new TropicalError('evalPolyWithPowers: no coefficients');
   if (coefficients.length > pows.length) {
