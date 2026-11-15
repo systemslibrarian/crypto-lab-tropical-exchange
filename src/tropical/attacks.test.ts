@@ -349,11 +349,21 @@ describe('the negative-claim bite fixture — a different Alice’s message', ()
 
 describe('mutation (3) — the heuristic without its constant', () => {
   it('leaving c out moves every entry of the key by exactly c', () => {
-    // The brief: check B's key is then off by 3 in every entry. Asserted here
-    // so the mutation's effect is a measurement, not a prediction.
     const session = sessionFor(INSTANCE_B);
     const transcript = publicView(session);
     const result = heuristicAttack(transcript, 3);
+
+    // THE HEURISTIC'S OWN X carries the constant. Asserted first, because the
+    // rest of this test builds its own no-scalar X from `matPow` and so says
+    // nothing about what the attack returned: the mutation that drops the
+    // scalar from `heuristicAttack` survived this test until this assertion
+    // existed, which is exactly the shape §4.1c exists to find — a test named
+    // for a property it was not actually reading.
+    expect(result.found!.x).toEqual(scalarMul(result.found!.c, matPow(INSTANCE_B.a, result.found!.i)));
+    expect(result.found!.x).not.toEqual(matPow(INSTANCE_B.a, result.found!.i));
+
+    // And the consequence of dropping it: the brief's expected offset of 3 in
+    // every entry, measured rather than predicted.
     const withoutScalar = keyFrom(matPow(INSTANCE_B.a, result.found!.i), transcript.v, result.found!.y);
     const offsets = new Set<number>();
     for (let i = 0; i < 3; i++) {
