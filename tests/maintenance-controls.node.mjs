@@ -314,8 +314,24 @@ test('every recorded mutation still applies to the source it names', () => {
   assert.ok(entries.length > 0, 'the ledger records no mutations');
   for (const [id, entry] of entries) {
     const source = readFileSync(new URL(entry.file, root), 'utf8');
-    const occurrences = source.split(entry.find).length - 1;
-    assert.equal(occurrences, 1, `${id}: its anchor occurs ${occurrences}x in ${entry.file}, expected 1`);
+    const unmutated = source.split(entry.find).length - 1;
+    const mutated = source.split(entry.replace).length - 1;
+    // EXACTLY ONE of the two directions must apply, because this control runs
+    // in two different trees. In the working tree the `find` anchor is there
+    // and the patch applies forward. Inside the mutation runner's isolated
+    // tree the patch has ALREADY been applied, and the build it then runs --
+    // which is also what Playwright's webServer runs -- executes this very
+    // file. Asserting only the forward direction made every claims-suite
+    // mutation fail its own build, which the runner correctly refused to count
+    // as a kill ("server never started") rather than quietly banking it.
+    //
+    // The rot check survives intact: if the code is refactored so that neither
+    // string matches, or either matches twice, this still fails.
+    assert.equal(
+      unmutated + mutated,
+      1,
+      `${id}: ${unmutated} anchor and ${mutated} replacement match(es) in ${entry.file}; exactly one must`,
+    );
     assert.notEqual(entry.find, entry.replace, `${id}: the patch is a no-op`);
     assert.ok(Object.keys(entry.kills ?? {}).length > 0, `${id}: records no kill`);
     assert.ok(['unit', 'claims'].includes(entry.suite), `${id}: unknown suite ${entry.suite}`);
