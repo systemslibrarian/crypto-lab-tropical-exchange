@@ -206,21 +206,43 @@ const notAKill = (output) => NOT_A_KILL.find(({ pattern }) => pattern.test(strip
  * the baseline passed. Both suites run whole, once per phase, and the per-test
  * answer is read out of the reporter.
  */
+const REPORT = { unit: 'mutation-report-unit.json', claims: 'mutation-report-claims.json' };
+
 function runSuite(suite) {
+  // Both runners are told to write their JSON to a FILE rather than stdout.
+  // Vitest 5 writes a path to stdout instead of the report, and Playwright's
+  // stdout carries the page's console output alongside the JSON — so parsing
+  // stdout means parsing whatever the lab happened to log. The file is the
+  // report; stdout is kept only for the failure-shape classification in
+  // `notAKill`, which is about the RUN rather than the results.
+  const target = join(TREE, REPORT[suite]);
+  rmSync(target, { force: true });
   const cmd =
     suite === 'claims'
-      ? 'npx playwright test --project=claims --reporter=json --retries=0'
-      : 'npx vitest run --reporter=json';
+      ? `PLAYWRIGHT_JSON_OUTPUT_NAME=${REPORT[suite]} npx playwright test --project=claims --reporter=json --retries=0`
+      : `npx vitest run --reporter=json --outputFile=${REPORT[suite]}`;
   try {
-    return { failed: false, output: sh(cmd) };
+    return { failed: false, output: sh(cmd), report: readReport(target) };
   } catch (err) {
-    return { failed: true, output: `${err.stdout ?? ''}${err.stderr ?? ''}` };
+    return {
+      failed: true,
+      output: `${err.stdout ?? ''}${err.stderr ?? ''}`,
+      report: readReport(target),
+    };
   }
 }
 
-/** Test titles that FAILED, from either reporter's JSON. */
-function failingTitles(suite, output) {
-  const json = extractJson(output);
+function readReport(path) {
+  if (!existsSync(path)) return null;
+  try {
+    return JSON.parse(readFileSync(path, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+/** Test titles that FAILED, from either reporter's JSON report. */
+function failingTitles(suite, json) {
   if (!json) return null;
   const titles = [];
   if (suite === 'claims') {
@@ -242,8 +264,7 @@ function failingTitles(suite, output) {
 }
 
 /** Test titles that PASSED, for rule 1. */
-function passingTitles(suite, output) {
-  const json = extractJson(output);
+function passingTitles(suite, json) {
   if (!json) return null;
   const titles = [];
   if (suite === 'claims') {
@@ -262,21 +283,6 @@ function passingTitles(suite, output) {
     }
   }
   return titles;
-}
-
-/** Both runners print prose around their JSON; take the outermost object. */
-function extractJson(output) {
-  const text = strip(output);
-  const start = text.indexOf('{');
-  if (start === -1) return null;
-  for (let end = text.lastIndexOf('}'); end > start; end = text.lastIndexOf('}', end - 1)) {
-    try {
-      return JSON.parse(text.slice(start, end + 1));
-    } catch {
-      /* keep walking back to the previous closing brace */
-    }
-  }
-  return null;
 }
 
 function apply(entry, forward) {
@@ -311,7 +317,7 @@ for (const suite of suites) {
     rmSync(TREE, { recursive: true, force: true });
     process.exit(2);
   }
-  const passed = passingTitles(suite, baseline.output);
+  const passed = passingTitles(suite, baseline.report);
   if (!passed) {
     console.error(`\nCould not read the ${suite} reporter's output. Refusing to judge blind.`);
     rmSync(TREE, { recursive: true, force: true });
@@ -341,8 +347,8 @@ for (const id of ids) {
     const compiles = typechecks();
     const built = build();
     const mutatedHash = built ? bundleHash() : null;
-    const mutated = built ? runSuite(entry.suite) : { failed: false, output: '' };
-    const failed = built ? failingTitles(entry.suite, mutated.output) : [];
+    const mutated = built ? runSuite(entry.suite) : { failed: false, output: '', report: null };
+    const failed = built ? failingTitles(entry.suite, mutated.report) : [];
     apply(entry, false);
     build();
     const restoredHash = bundleHash();

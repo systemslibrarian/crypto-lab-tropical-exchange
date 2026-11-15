@@ -10,3 +10,6 @@ chat.md
 # ages silently into a second, wrong standard (kickoff.md).
 _MASTER-TEMPLATE.md
 CRYPTO-LAB-TEMPLATE*.md
+
+.vitest/
+mutation-report-*.json
