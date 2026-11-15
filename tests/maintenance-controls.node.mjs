@@ -95,7 +95,11 @@ test('the whole suite gates a publish, not only the browser half', () => {
   // The mutation ledger runs in CI too: a guard CI never runs is decoration,
   // and a recorded kill nobody replays is a sentence about a run that happened
   // once.
-  assert.match(browser, /run: npm run test:mutation/);
+  // Matched as a COMMAND rather than as a whole `run:` line: the step is a
+  // block scalar so it can mark the workspace safe for git first, and a
+  // pattern anchored to `run:` would read that as the ledger having been
+  // removed. The question is whether the command runs, not how it is spelled.
+  assert.match(browser, /npm run test:mutation/);
   // Never `--with-deps`: that apt step wedged 547 CI runs in one afternoon.
   // This job uses the pinned container image instead.
   assert.doesNotMatch(browser, /--with-deps/);
