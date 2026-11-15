@@ -106,6 +106,14 @@ jobs:
       - name: Accessibility gate (axe-core, WCAG A/AA) and the claims suite
         run: npx playwright test --reporter=list
 
+      # §4.1c, enforced rather than described. Every recorded mutation is
+      # applied in an isolated tree, built, and judged: the named test must
+      # have passed unmutated, the patch must have changed the file, the
+      # bundle hash must have moved, and the failure must be that test's own.
+      # A guard CI never runs is decoration.
+      - name: Mutation ledger (every recorded mutation must still be killed)
+        run: npm run test:mutation
+
   deploy:
     needs: [build, browser-gate]
     # NOT `== 'push'`. That also skips workflow_dispatch, which is the one

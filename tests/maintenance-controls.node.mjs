@@ -92,6 +92,10 @@ test('the whole suite gates a publish, not only the browser half', () => {
   const browser = job('browser-gate');
   assert.match(browser, /run: npm ci/);
   assert.match(browser, /npx playwright test/);
+  // The mutation ledger runs in CI too: a guard CI never runs is decoration,
+  // and a recorded kill nobody replays is a sentence about a run that happened
+  // once.
+  assert.match(browser, /run: npm run test:mutation/);
   // Never `--with-deps`: that apt step wedged 547 CI runs in one afternoon.
   // This job uses the pinned container image instead.
   assert.doesNotMatch(browser, /--with-deps/);
@@ -294,6 +298,24 @@ test('the repo ships a licence and ignores what should not be committed', () => 
   // The master template is read from disk and never committed: a committed
   // copy ages silently into a second, wrong standard.
   assert.match(gitignore, /_MASTER-TEMPLATE\.md/);
+});
+
+test('every recorded mutation still applies to the source it names', () => {
+  // A mutation whose `find` no longer matches guards nothing, and would let a
+  // verdict drift back to a canned value with this control still green. The
+  // runner checks this too, but it needs a built tree and a few minutes; this
+  // runs on every build.
+  const ledger = JSON.parse(readFileSync(new URL('e2e/verdict-mutations.json', root), 'utf8'));
+  const entries = Object.entries(ledger.mutations);
+  assert.ok(entries.length > 0, 'the ledger records no mutations');
+  for (const [id, entry] of entries) {
+    const source = readFileSync(new URL(entry.file, root), 'utf8');
+    const occurrences = source.split(entry.find).length - 1;
+    assert.equal(occurrences, 1, `${id}: its anchor occurs ${occurrences}x in ${entry.file}, expected 1`);
+    assert.notEqual(entry.find, entry.replace, `${id}: the patch is a no-op`);
+    assert.ok(Object.keys(entry.kills ?? {}).length > 0, `${id}: records no kill`);
+    assert.ok(['unit', 'claims'].includes(entry.suite), `${id}: unknown suite ${entry.suite}`);
+  }
 });
 
 test('the source paper is cited but never vendored', () => {
