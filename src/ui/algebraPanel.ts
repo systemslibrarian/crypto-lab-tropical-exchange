@@ -180,7 +180,7 @@ export function renderAlgebraPanel(root: HTMLElement): void {
       'p',
       { class: 'help' },
       'This is the matrix printed in the Kotov–Ushakov paper, with entries drawn from [-100, 100]. ' +
-        'Each tropical power takes a minimum over longer and longer sums, so the entries slide ' +
+        'Each tropical power takes a minimum over longer and longer sums. For this matrix the entries slide ' +
         'downward — and they do it fast.',
     ),
   );
@@ -198,7 +198,7 @@ export function renderAlgebraPanel(root: HTMLElement): void {
         h('th', { scope: 'col' }, 'power'),
         h('th', { scope: 'col' }, 'smallest entry'),
         h('th', { scope: 'col' }, 'largest entry'),
-        h('th', { scope: 'col' }, 'drop from previous'),
+        h('th', { scope: 'col' }, 'change in largest entry'),
       ),
     ),
   );
@@ -228,9 +228,8 @@ export function renderAlgebraPanel(root: HTMLElement): void {
   root.append(
     note(
       'info',
-      'Hold on to that last column. Once consecutive powers are more than 2,000 apart, a ' +
-        'coefficient drawn from [-1000, 1000] can no longer make a lower power win the minimum — ' +
-        'and the whole first attack falls out of that one observation.',
+      'The last column compares the largest entries. It does not measure the change in each cell. ' +
+        'For contrast, every power of the min-plus identity matrix is the identity again.',
     ),
   );
 
